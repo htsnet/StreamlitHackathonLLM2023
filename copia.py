@@ -10,6 +10,7 @@ auth_key = st.secrets['auth_key']
 if 'status' not in st.session_state:
     st.session_state.status = 'submitted'
     st.session_state.save_location = ''
+    st.session_state.transcription_completed = False
     
 ydl_opts = {
     'format': 'bestaudio/best',
@@ -121,11 +122,38 @@ def main():
     # link
     link = st.text_input('Paste your Youtube video link and press Enter')
     
+    # if link != '':
+    #     transcription = ''
+    #     col1, col2 = st.columns(2)
+       
+    #     with col1:
+    #         st.video(link)
+            
+    #     with col2:
+    #         with st.spinner('Working... '):
+    #             download_audio(link)
+    #             pooling_endpoint = start_transcription() 
+                
+    #             while st.session_state.status != 'completed':
+    #                 pooling_response = requests.get(
+    #                     pooling_endpoint, 
+    #                     headers=headers
+    #                 )
+    #                 st.session_state.status = pooling_response.json()['status']
+    #                 transcription = pooling_response.json()['text']
+
+    #         st.success('Done!')
+    #         st.session_state.transcription_completed = True
+    #         st.markdown(transcription)
+        
+    #     if st.session_state.transcription_completed:
+    #         st.markdown(transcription)
+    
     if link != '':
+        transcription = ''
         st.video(link)
         with st.spinner('Working... '):
             download_audio(link)
-            
             pooling_endpoint = start_transcription() 
             
             while st.session_state.status != 'completed':
@@ -136,8 +164,9 @@ def main():
                 st.session_state.status = pooling_response.json()['status']
                 transcription = pooling_response.json()['text']
 
-            st.success('Done!')
-            st.markdown(transcription)
+        st.success('Done!')
+        st.session_state.transcription_completed = True
+        st.markdown(transcription)
 
 if __name__ == '__main__':
 	main()   
