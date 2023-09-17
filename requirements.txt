@@ -3,3 +3,9 @@ requests
 pytube
 pprint
 time
+assemblyai
+collections
+nltk
+plotly
+matplotlib
+pandas

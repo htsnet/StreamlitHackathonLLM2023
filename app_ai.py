@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from pytube import YouTube
 import requests
-import pprint
 import time
 import assemblyai as aai
 from collections import defaultdict
