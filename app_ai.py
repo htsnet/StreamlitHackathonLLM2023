@@ -3,7 +3,7 @@ import pandas as pd
 from pytube import YouTube
 import requests
 import pprint
-from time import sleep
+import time
 import assemblyai as aai
 from collections import defaultdict
 import re
@@ -21,6 +21,7 @@ auth_key = st.secrets['auth_key']
 audio_location = ''
 audio_url = ''
 transcription = ''
+process_status = ''
 
 # youtube-dl options
 ydl_opts = {
@@ -71,7 +72,7 @@ def download_audio(link):
     audio_stream = get_vid(_id)
     download_path = './'
     audio_location = audio_stream.download(output_path=download_path)   
-    print('Saved audio to', audio_location)
+    # print('Saved audio to', audio_location)
     
 def read_file(filename):
     with open(filename, 'rb') as _file:
@@ -91,7 +92,7 @@ def upload_audio():
     )
     
     audio_url = upload_response.json()['upload_url']
-    st.write('Uploaded audio to', audio_url)
+
 
 def gauge_chart(value, max_value, label):
     fig, ax = plt.subplots(figsize=(6, 5))
@@ -135,7 +136,7 @@ def main():
         st.header('Information')
         st.write("""
                 This project was created with the goal of participating in the 'Streamlit LLM Hackathon 2023'. 
-                \nThis site use AssemblyAI service to transcribe audio from Youtube videos.
+                \nThis site use **AssemblyAI** service to transcribe audio from Youtube videos.
                 """)
         
         st.header('About')
@@ -145,65 +146,111 @@ def main():
     title = f'LLM'
     st.title(title)
     
-    subTitle = f'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+    subTitle = f'Using a Youtube video link, this site will transcribe the audio and show relevant information.'
     st.subheader(subTitle)
 
-    # link
-    link = st.text_input('Paste your Youtube video link and press Enter')
-    
-    # download stopwords
-    nltk.download('stopwords')
-    stop_words = set(stopwords.words('english'))
-    
-    
-    if link != '':
-        aai.settings.api_key = auth_key
-        
-        col1, col2, col3 = st.columns(3)
-        # using col1 to reduce width of video
-        with col1:
-            st.video(link)
-            
-        
-            
-        with st.spinner('Getting audio... (1/3)'):
-            download_audio(link)
-            
-        with st.spinner('Uploading audio... (2/3)'):
-            upload_audio()    
-        
-        with st.spinner('Transcribing audio... (3/3)'):
-            config = aai.TranscriptionConfig(speaker_labels=True)
+    # information tabs  
+    st.markdown('<style>[id^="tabs-bui3-tab-"] > div > p{font-size:20px;}</style>', unsafe_allow_html=True)
+    # emoji list https://streamlit-emoji-shortcodes-streamlit-app-gwckff.streamlit.app/
+    tab1, tab2, tab3, tab4 = st.tabs(['📹:red[ **Video Process**]', '📖:red[ **Transcription**]', '📄:red[ **Sumary**]', '🏷️:red[ **Categories**]'])
 
-            transcriber = aai.Transcriber()
-            transcript = transcriber.transcribe(
-            audio_url,
-            config=config
-            )
+    with tab1:
+        st.subheader('Start here!')
+        
+        # link
+        link = st.text_input('Paste your Youtube video link and press Enter')
+        
+        # download stopwords
+        nltk.download('stopwords')
+        stop_words = set(stopwords.words('english'))
+        
+        
+        if link != '':
+            time_start = time.time()
+            aai.settings.api_key = auth_key
             
-            # st.markdown(transcript.text)
-            transcription = transcript.text
-                    
-            # dictionary to store the words
-            word_counts = defaultdict(int)
+            col1, col2, col3 = st.columns(3)
+            # using col1 to reduce width of video
+            with col1:
+                st.video(link)
+
+            with st.spinner('Getting audio... (1/3)'):
+                download_audio(link)
+                
+            with st.spinner('Uploading audio... (2/3)'):
+                upload_audio()  
+                
+            with col2:
+                st.write('Uploaded audio to', audio_url)  
             
-            # regular expression to remove punctuation
-            word_pattern = re.compile(r'\b\w+\b')
-            word_count = 0
-            confidence_values = 0
+            with st.spinner('Transcribing audio... (3/3)'):
+                config = aai.TranscriptionConfig(
+                    speaker_labels=True, 
+                    iab_categories=True
+                    )
 
-            # read json result and count words
-            for pieces in transcript.utterances:
-                words = pieces.words
-                for word in words:
-                    # remove punctuation and convert to lowercase
-                    text = word_pattern.findall(word.text)
-                    # sum 1 for each word found, if not empty
-                    if text and text[0] not in stop_words:
-                        word_counts[text[0].lower()] += 1
-                        word_count += 1
-                        confidence_values += word.confidence
+                transcriber = aai.Transcriber()
+                transcript = transcriber.transcribe(
+                audio_url,
+                config=config
+                )
+                
+                # st.markdown(transcript.text)
+                transcription = transcript
+                
+                # dictionary to store the words
+                word_counts = defaultdict(int)
+                
+                # regular expression to remove punctuation
+                word_pattern = re.compile(r'\b\w+\b')
+                word_count = 0
+                confidence_values = 0
 
+                # read json result and count words
+                for pieces in transcript.utterances:
+                    words = pieces.words
+                    for word in words:
+                        # remove punctuation and convert to lowercase
+                        text = word_pattern.findall(word.text)
+                        # sum 1 for each word found, if not empty
+                        if text and text[0] not in stop_words:
+                            word_counts[text[0].lower()] += 1
+                            word_count += 1
+                            confidence_values += word.confidence
+                
+                process_status = 'done'
+                time_stop = time.time()
+                
+            with col2:
+                time_total = time_stop - time_start
+                st.write('🕔 Processed in',  "{:.1f}".format(round(time_total, 1)), 'seconds!')
+                
+            with col3:
+                # st.markdown(f"Total words: {word_count}")
+                # st.markdown(f"Total confidence: {confidence_values}")
+                # st.markdown(f"Average confidence: {confidence_values/word_count}")
+                confidence = confidence_values/word_count * 100
+                
+                # Gauge Chart
+                max_value = 100
+                st.pyplot(gauge_chart(confidence, max_value, f'{word_count} words'))
+
+    with tab2:
+        st.subheader('Audio Transcription')
+        if process_status == 'done':
+            # Get the parts of the transcript that were tagged with topics
+            for result in transcription.iab_categories.results:
+                st.markdown(result.text)
+                # st.markdown(f"Timestamp: {result.timestamp.start} - {result.timestamp.end}")
+                # for label in result.labels:
+                #     st.markdown(label.label)  # topic
+                #     st.markdown(label.relevance)  # how relevant the label is for the portion of text
+        else:
+            st.markdown('Process the video first!')
+
+    with tab3:
+        st.subheader('Sumary')
+        if process_status == 'done':
             # sort descending
             sorted_word_counts = dict(sorted(word_counts.items(), key=lambda item: item[1], reverse=True))
 
@@ -216,17 +263,19 @@ def main():
 
             # show the dataframe            
             st.table(df)
+        else:
+            st.markdown('Process the video first!')
+    
+    with tab4:
+        st.subheader('Relevant Categories')
+        if process_status == 'done':
+            # Get a summary of all topics in the transcript
+            for label, relevance in transcription.iab_categories.summary.items():
+                relevance = "{:.1f}%".format(round(relevance * 100, 1))
+                st.markdown(f"{label} ({relevance})")
+        else:
+            st.markdown('Process the video first!')
 
-        with col3:
-            # st.markdown(f"Total words: {word_count}")
-            # st.markdown(f"Total confidence: {confidence_values}")
-            # st.markdown(f"Average confidence: {confidence_values/word_count}")
-            
-            confidence = confidence_values/word_count * 100
-            
-            # Gauge Chart
-            max_value = 100
-            st.pyplot(gauge_chart(confidence, max_value, f'{word_count} words'))
 
 if __name__ == '__main__':
 	main()   
