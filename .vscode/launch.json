@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Streamlit App",
+            "type": "python",
+            "request": "launch",
+            "program": "C:/Users/hamil/Dropbox/Projetos/Streamlit/StreamlitHackathonLLM2023/app_ai.py",  
+            "args": ["run"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

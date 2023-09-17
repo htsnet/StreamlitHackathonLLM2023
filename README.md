@@ -13,4 +13,4 @@ pip install virtualenv
 python -m venv Ambiente_Virtual  
 Ambiente_Virtual\Scripts\activate.bat
 pip install <packages>  
-streamlit run app.py   
+streamlit run app_ai.py   
