@@ -1,6 +1,6 @@
 Project: Streamlit LLM Hackathon 2023  
 Autor: Hamilton Tenório da Silva  
-Date: sep/16/2023  
+Date: Sep/16/2023  
 Project name: LLM operations   
 Description:
 
@@ -8,7 +8,7 @@ Description:
 
 See this project on 
 
------- Instructions ------
+------ Instructions ------   
 pip install virtualenv  
 python -m venv Ambiente_Virtual  
 Ambiente_Virtual\Scripts\activate.bat
