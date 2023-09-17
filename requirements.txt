@@ -1,7 +1,6 @@
 streamlit
 requests
 pytube
-time
 assemblyai
 collections
 nltk
