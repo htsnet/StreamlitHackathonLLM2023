@@ -181,52 +181,60 @@ def main():
                 with col1:
                     st.video(link)
 
-                with st.spinner('Getting audio... (1/3)'):
-                    download_audio(link)
+                try: 
+                    with st.spinner('Getting audio... (1/3)'):
+                        download_audio(link)
+                        
+                    with st.spinner('Uploading audio... (2/3)'):
+                        upload_audio()  
+                        
+                    with col2:
+                        st.write('Uploaded audio to', audio_url)  
                     
-                with st.spinner('Uploading audio... (2/3)'):
-                    upload_audio()  
-                    
-                with col2:
-                    st.write('Uploaded audio to', audio_url)  
-                
-                with st.spinner('Transcribing audio... (3/3)'):
-                    config = aai.TranscriptionConfig(
-                        speaker_labels=True, 
-                        iab_categories=True
+                    with st.spinner('Transcribing audio... (3/3)'):
+                        config = aai.TranscriptionConfig(
+                            speaker_labels=True, 
+                            iab_categories=True
+                            )
+
+                        transcriber = aai.Transcriber()
+                        transcript = transcriber.transcribe(
+                        audio_url,
+                        config=config
                         )
+                        
+                        # st.markdown(transcript.text)
+                        transcription = transcript
+                        
+                        # dictionary to store the words
+                        word_counts = defaultdict(int)
+                        
+                        # regular expression to remove punctuation
+                        word_pattern = re.compile(r'\b\w+\b')
+                        word_count = 0
+                        confidence_values = 0
 
-                    transcriber = aai.Transcriber()
-                    transcript = transcriber.transcribe(
-                    audio_url,
-                    config=config
-                    )
-                    
-                    # st.markdown(transcript.text)
-                    transcription = transcript
-                    
-                    # dictionary to store the words
-                    word_counts = defaultdict(int)
-                    
-                    # regular expression to remove punctuation
-                    word_pattern = re.compile(r'\b\w+\b')
-                    word_count = 0
-                    confidence_values = 0
+                        # read json result and count words
+                        for pieces in transcript.utterances:
+                            words = pieces.words
+                            for word in words:
+                                # remove punctuation and convert to lowercase
+                                text = word_pattern.findall(word.text)
+                                # sum 1 for each word found, if not empty
+                                if text and text[0] not in stop_words:
+                                    word_counts[text[0].lower()] += 1
+                                    word_count += 1
+                                    confidence_values += word.confidence
 
-                    # read json result and count words
-                    for pieces in transcript.utterances:
-                        words = pieces.words
-                        for word in words:
-                            # remove punctuation and convert to lowercase
-                            text = word_pattern.findall(word.text)
-                            # sum 1 for each word found, if not empty
-                            if text and text[0] not in stop_words:
-                                word_counts[text[0].lower()] += 1
-                                word_count += 1
-                                confidence_values += word.confidence
-
-                    process_status = 'done'
+                        process_status = 'done'
+                        time_stop = time.time()
+                
+                except:
+                    st.write('Error! Maybe the video is private. Try another')
+                    process_status = ''
                     time_stop = time.time()
+                    st.toast('Problem with the video!', icon='❗')
+                    st.stop()  
                     
                 with col2:
                     time_total = time_stop - time_start
