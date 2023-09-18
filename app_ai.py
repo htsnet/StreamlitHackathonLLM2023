@@ -213,24 +213,34 @@ def main():
                         word_pattern = re.compile(r'\b\w+\b')
                         word_count = 0
                         confidence_values = 0
+                        
+                        if transcription.error:
+                            st.write(transcription.error)
+                            process_status = 'error'
+                            st.toast('Problem with the video!', icon='❗')
+                            st.stop()
 
-                        # read json result and count words
-                        for pieces in transcript.utterances:
-                            words = pieces.words
-                            for word in words:
-                                # remove punctuation and convert to lowercase
-                                text = word_pattern.findall(word.text)
-                                # sum 1 for each word found, if not empty
-                                if text and text[0] not in stop_words:
-                                    word_counts[text[0].lower()] += 1
-                                    word_count += 1
-                                    confidence_values += word.confidence
+                        try:
+                            # read json result and count words
+                            for pieces in transcript.utterances:
+                                words = pieces.words
+                                for word in words:
+                                    # remove punctuation and convert to lowercase
+                                    text = word_pattern.findall(word.text)
+                                    # sum 1 for each word found, if not empty
+                                    if text and text[0] not in stop_words:
+                                        word_counts[text[0].lower()] += 1
+                                        word_count += 1
+                                        confidence_values += word.confidence
+                        except Exception as e:
+                            st.write(e)
 
                         process_status = 'done'
                         time_stop = time.time()
                 
-                except:
+                except Exception as e:
                     st.write('Error! Maybe the video is private. Try another')
+                    st.write(e)
                     process_status = ''
                     time_stop = time.time()
                     st.toast('Problem with the video!', icon='❗')
@@ -244,7 +254,10 @@ def main():
                     # st.markdown(f"Total words: {word_count}")
                     # st.markdown(f"Total confidence: {confidence_values}")
                     # st.markdown(f"Average confidence: {confidence_values/word_count}")
-                    confidence = confidence_values/word_count * 100
+                    if word_count > 0:
+                        confidence = confidence_values/word_count * 100
+                    else:
+                        confidence = 0
                     
                     # Gauge Chart
                     max_value = 100
