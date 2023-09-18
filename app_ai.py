@@ -169,7 +169,9 @@ def main():
         stop_words = set(stopwords.words('english'))        
         
         if link != '':
-            if link_new != link:
+            if link_new == link:
+                st.toast('Video already processed!', icon='❗')
+            else:
                 link_new = link
                 time_start = time.time()
                 aai.settings.api_key = auth_key
@@ -241,6 +243,7 @@ def main():
                     st.pyplot(gauge_chart(confidence, max_value, f'{word_count} words'))
                     
                 st.markdown('See the tabs above for information about the audio!')
+                st.toast('Great. Video processed! Enjoy', icon='🎉')
                 if st.button("Reset", type="primary"):
                     audio_location = ''
                     audio_url = ''
