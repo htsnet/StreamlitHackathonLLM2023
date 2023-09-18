@@ -244,13 +244,6 @@ def main():
                     
                 st.markdown('See the tabs above for information about the audio!')
                 st.toast('Great. Video processed! Enjoy', icon='🎉')
-                if st.button("Reset", type="primary"):
-                    audio_location = ''
-                    audio_url = ''
-                    process_status = ''
-                    transcription = ''
-                    link = ''
-                    st.experimental_rerun()
 
     with tab2:
         st.subheader('Audio Transcription')
