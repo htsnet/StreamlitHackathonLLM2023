@@ -2,13 +2,12 @@ import streamlit as st
 import pandas as pd
 from pytube import YouTube
 import requests
-import pprint
-from time import sleep
+import time
 import assemblyai as aai
 from collections import defaultdict
-import re
 import nltk
 from nltk.corpus import stopwords
+import plotly.express as px
 import plotly.express as px
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
@@ -19,6 +18,11 @@ auth_key = st.secrets['auth_key']
 # global variables
 audio_location = ''
 audio_url = ''
+transcription = ''
+process_status = ''
+link = ''
+# to control link already processes
+link_new = ''
 
 # youtube-dl options
 ydl_opts = {
@@ -69,7 +73,7 @@ def download_audio(link):
     audio_stream = get_vid(_id)
     download_path = './'
     audio_location = audio_stream.download(output_path=download_path)   
-    print('Saved audio to', audio_location)
+    # print('Saved audio to', audio_location)
     
 def read_file(filename):
     with open(filename, 'rb') as _file:
@@ -89,9 +93,8 @@ def upload_audio():
     )
     
     audio_url = upload_response.json()['upload_url']
-    st.write('Uploaded audio to', audio_url)
 
-# Função para criar o gráfico de medidor
+
 def gauge_chart(value, max_value, label):
     fig, ax = plt.subplots(figsize=(6, 5))
     
@@ -116,59 +119,84 @@ def gauge_chart(value, max_value, label):
     ax.axis('off')
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    ax.text(0.5, 0.5, f"{value}/{max_value}\n{label}", ha='center', va='center', fontsize=20)
     # explain text
-    ax.text(0.5, 0.15, "Greater green bar is better", ha='center', va='center', fontsize=18, color='green')
-    ax.text(0.5, 0.25, "Global Confidence", ha='center', va='center', fontsize=24, color='black')
+    ax.text(0.5, 0.6, "{:.1f}%".format(round(value, 1)), ha='center', va='center', fontsize=20)
+    ax.text(0.5, 0.5, label, ha='center', va='center', fontsize=16)
+    ax.text(0.5, 0.25, "Global Confidence", ha='center', va='center', fontsize=26, color='black')
+    ax.text(0.5, 0.1, "Greater green bar is better", ha='center', va='center', fontsize=18, color='green')
     return fig
+
 
 def main():
     global audio_location
     global audio_url
     global process_status
+    global transcription
+    global link
+    global link_new
     
     with st.sidebar:
         # st.image('logo-250-transparente.png')
         st.header('Information')
         st.write("""
                 This project was created with the goal of participating in the 'Streamlit LLM Hackathon 2023'. 
-                \nThis site use AssemblyAI service to transcribe audio from Youtube videos.
-                
-                .
+                \nThis site use **AssemblyAI** service to transcribe audio from Youtube videos.
+                \nAt this point, the video must be in English.
                 """)
         
         st.header('About')
-        st.write('Details about this project can be found in https://github.com/htsnet/')
+        st.write('Details about this project can be found in https://github.com/htsnet/StreamlitHackathonLLM2023')
         
     # título
-    title = f'LLM'
+    title = f'Audio transcription and analysis with LLM'
     st.title(title)
     
-    subTitle = f'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+    subTitle = f'Using a Youtube video link, this site will transcribe the audio and show relevant information.'
     st.subheader(subTitle)
+    
+    # information tabs  
+    st.markdown('<style>[id^="tabs-bui3-tab-"] > div > p{font-size:20px;}</style>', unsafe_allow_html=True)
+    # emoji list https://streamlit-emoji-shortcodes-streamlit-app-gwckff.streamlit.app/
+    tab1, tab2, tab3, tab4 = st.tabs(['📹:red[ **Video Process**]', '📖:red[ **Transcription**]', '📄:red[ **Sumary**]', '🏷️:red[ **Categories**]'])
 
-    # link
-    link = st.text_input('Paste your Youtube video link and press Enter')
-    
-    # download stopwords
-    nltk.download('stopwords')
-    stop_words = set(stopwords.words('english'))
-    
-    
-    if link != '':
-        aai.settings.api_key = auth_key
+    with tab1:
+        st.subheader('Start here!')
         
-        col1, col2, col3 = st.columns(3)
-        # using col1 to reduce width of video
-        with col1:
-            st.video(link)
-            
+        # link
+        link = st.text_input('Paste your Youtube video link and press Enter', value=link)
+        
+        # download stopwords
+        nltk.download('stopwords')
+        stop_words = set(stopwords.words('english'))        
+        
+        if link != '':
+            if link_new != link:
+                link_new = link
+                time_start = time.time()
+                aai.settings.api_key = auth_key
+                
+                col1, col2, col3 = st.columns(3)
+                # using col1 to reduce width of video
+                with col1:
+                    st.video(link)
 
-        with col3:
-            # Gauge Chart
-            word_count = 933
-            max_value = 100
-            st.pyplot(gauge_chart(95, max_value, f'Words: {word_count}'))
+
+                    process_status = 'done'
+                    time_stop = time.time()
+                    
+                
+                with col2:
+                    time_total = time_stop - time_start
+                    st.write('🕔 Processed in',  "{:.1f}".format(round(time_total, 1)), 'seconds!')
+                    
+                st.markdown('See the tabs above for information about the audio!')
+                if st.button("Reset", type="primary"):
+                    audio_location = ''
+                    audio_url = ''
+                    process_status = ''
+                    transcription = ''
+                    link = ''
+                    st.experimental_rerun()
 
 if __name__ == '__main__':
 	main()   

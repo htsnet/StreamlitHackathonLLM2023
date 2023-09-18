@@ -21,6 +21,8 @@ audio_location = ''
 audio_url = ''
 transcription = ''
 process_status = ''
+link = ''
+link_new = ''
 
 # youtube-dl options
 ydl_opts = {
@@ -129,6 +131,8 @@ def main():
     global audio_url
     global process_status
     global transcription
+    global link
+    global link_new
     
     with st.sidebar:
         # st.image('logo-250-transparente.png')
@@ -136,13 +140,14 @@ def main():
         st.write("""
                 This project was created with the goal of participating in the 'Streamlit LLM Hackathon 2023'. 
                 \nThis site use **AssemblyAI** service to transcribe audio from Youtube videos.
+                \nAt this point, the video must be in English.
                 """)
         
         st.header('About')
-        st.write('Details about this project can be found in https://github.com/htsnet/')
+        st.write('Details about this project can be found in https://github.com/htsnet/StreamlitHackathonLLM2023')
         
     # título
-    title = f'LLM'
+    title = f'Audio transcription and analysis with LLM'
     st.title(title)
     
     subTitle = f'Using a Youtube video link, this site will transcribe the audio and show relevant information.'
@@ -161,78 +166,88 @@ def main():
         
         # download stopwords
         nltk.download('stopwords')
-        stop_words = set(stopwords.words('english'))
-        
+        stop_words = set(stopwords.words('english'))        
         
         if link != '':
-            time_start = time.time()
-            aai.settings.api_key = auth_key
-            
-            col1, col2, col3 = st.columns(3)
-            # using col1 to reduce width of video
-            with col1:
-                st.video(link)
+            if link_new != link:
+                link_new = link
+                time_start = time.time()
+                aai.settings.api_key = auth_key
+                
+                col1, col2, col3 = st.columns(3)
+                # using col1 to reduce width of video
+                with col1:
+                    st.video(link)
 
-            with st.spinner('Getting audio... (1/3)'):
-                download_audio(link)
+                with st.spinner('Getting audio... (1/3)'):
+                    download_audio(link)
+                    
+                with st.spinner('Uploading audio... (2/3)'):
+                    upload_audio()  
+                    
+                with col2:
+                    st.write('Uploaded audio to', audio_url)  
                 
-            with st.spinner('Uploading audio... (2/3)'):
-                upload_audio()  
-                
-            with col2:
-                st.write('Uploaded audio to', audio_url)  
-            
-            with st.spinner('Transcribing audio... (3/3)'):
-                config = aai.TranscriptionConfig(
-                    speaker_labels=True, 
-                    iab_categories=True
+                with st.spinner('Transcribing audio... (3/3)'):
+                    config = aai.TranscriptionConfig(
+                        speaker_labels=True, 
+                        iab_categories=True
+                        )
+
+                    transcriber = aai.Transcriber()
+                    transcript = transcriber.transcribe(
+                    audio_url,
+                    config=config
                     )
+                    
+                    # st.markdown(transcript.text)
+                    transcription = transcript
+                    
+                    # dictionary to store the words
+                    word_counts = defaultdict(int)
+                    
+                    # regular expression to remove punctuation
+                    word_pattern = re.compile(r'\b\w+\b')
+                    word_count = 0
+                    confidence_values = 0
 
-                transcriber = aai.Transcriber()
-                transcript = transcriber.transcribe(
-                audio_url,
-                config=config
-                )
-                
-                # st.markdown(transcript.text)
-                transcription = transcript
-                
-                # dictionary to store the words
-                word_counts = defaultdict(int)
-                
-                # regular expression to remove punctuation
-                word_pattern = re.compile(r'\b\w+\b')
-                word_count = 0
-                confidence_values = 0
+                    # read json result and count words
+                    for pieces in transcript.utterances:
+                        words = pieces.words
+                        for word in words:
+                            # remove punctuation and convert to lowercase
+                            text = word_pattern.findall(word.text)
+                            # sum 1 for each word found, if not empty
+                            if text and text[0] not in stop_words:
+                                word_counts[text[0].lower()] += 1
+                                word_count += 1
+                                confidence_values += word.confidence
 
-                # read json result and count words
-                for pieces in transcript.utterances:
-                    words = pieces.words
-                    for word in words:
-                        # remove punctuation and convert to lowercase
-                        text = word_pattern.findall(word.text)
-                        # sum 1 for each word found, if not empty
-                        if text and text[0] not in stop_words:
-                            word_counts[text[0].lower()] += 1
-                            word_count += 1
-                            confidence_values += word.confidence
-                
-                process_status = 'done'
-                time_stop = time.time()
-                
-            with col2:
-                time_total = time_stop - time_start
-                st.write('🕔 Processed in',  "{:.1f}".format(round(time_total, 1)), 'seconds!')
-                
-            with col3:
-                # st.markdown(f"Total words: {word_count}")
-                # st.markdown(f"Total confidence: {confidence_values}")
-                # st.markdown(f"Average confidence: {confidence_values/word_count}")
-                confidence = confidence_values/word_count * 100
-                
-                # Gauge Chart
-                max_value = 100
-                st.pyplot(gauge_chart(confidence, max_value, f'{word_count} words'))
+                    process_status = 'done'
+                    time_stop = time.time()
+                    
+                with col2:
+                    time_total = time_stop - time_start
+                    st.write('🕔 Processed in',  "{:.1f}".format(round(time_total, 1)), 'seconds!')
+                    
+                with col3:
+                    # st.markdown(f"Total words: {word_count}")
+                    # st.markdown(f"Total confidence: {confidence_values}")
+                    # st.markdown(f"Average confidence: {confidence_values/word_count}")
+                    confidence = confidence_values/word_count * 100
+                    
+                    # Gauge Chart
+                    max_value = 100
+                    st.pyplot(gauge_chart(confidence, max_value, f'{word_count} words'))
+                    
+                st.markdown('See the tabs above for information about the audio!')
+                if st.button("Reset", type="primary"):
+                    audio_location = ''
+                    audio_url = ''
+                    process_status = ''
+                    transcription = ''
+                    link = ''
+                    st.experimental_rerun()
 
     with tab2:
         st.subheader('Audio Transcription')
