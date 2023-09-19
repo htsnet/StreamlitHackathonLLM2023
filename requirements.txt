@@ -10,3 +10,5 @@ langchain
 openai
 sentence-transformers
 torch
+streamlit_feedback
+langsmith.client
