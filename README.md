@@ -11,7 +11,7 @@ At this point, the video must be in English.
 
 See this project on https://apphackathonllm2023-rrqhordtnjzy9byshrqsu6.streamlit.app/
 
-<video src="working.mp4" controls title="Video demo"></video>   
+<video src="https://youtu.be/2Br9Yn3Ef2g" controls title="Video demo"></video>   
 
 ![Alt text](Screenshot_video.png)   
 
