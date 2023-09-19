@@ -11,6 +11,8 @@ At this point, the video must be in English.
 
 See this project on https://apphackathonllm2023-rrqhordtnjzy9byshrqsu6.streamlit.app/
 
+<video src="working.mp4" controls title="Video demo"></video>   
+
 ![Alt text](Screenshot_video.png)   
 
 ![Alt text](Screenshot_transcription.png)   
@@ -21,7 +23,7 @@ See this project on https://apphackathonllm2023-rrqhordtnjzy9byshrqsu6.streamlit
 
 ![Alt text](Screenshot-chat.png)
 
-<video src="working.mp4" controls title="Video demo"></video>   
+
 
 ------ Instructions ------   
 pip install virtualenv  
