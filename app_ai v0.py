@@ -8,22 +8,10 @@ from collections import defaultdict
 import re
 import nltk
 from nltk.corpus import stopwords
+import plotly.express as px
+import plotly.express as px
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
-from langchain.callbacks.manager import tracing_v2_enabled
-from langchain.callbacks.tracers.langchain import wait_for_all_tracers
-from langchain.callbacks.tracers.run_collector import RunCollectorCallbackHandler
-from langchain.schema.runnable import RunnableConfig
-from openai.error import AuthenticationError
-from langsmith import Client
-
-from llm_stuff import (
-    _DEFAULT_SYSTEM_PROMPT,
-    get_memory,
-    get_llm_chain,
-    StreamHandler,
-    get_langsmith_client,
-)
 
 # auth_key from secrets
 auth_key = st.secrets['auth_key']
@@ -31,21 +19,11 @@ auth_key = st.secrets['auth_key']
 # global variables
 audio_location = ''
 audio_url = ''
+transcription = ''
+process_status = ''
 link = ''
 link_new = ''
 
-# Initialize State
-if "trace_link" not in st.session_state:
-    st.session_state.trace_link = None
-if "run_id" not in st.session_state:
-    st.session_state.run_id = None
-if "openai_api_key" not in st.session_state:
-    st.session_state.openai_api_key = ''
-st.session_state.transcription = ''
-st.session_state.process_status = ''    
-
-st.session_state.chat_text = ''    
-    
 # youtube-dl options
 ydl_opts = {
     'format': 'bestaudio/best',
@@ -151,6 +129,8 @@ def gauge_chart(value, max_value, label):
 def main():
     global audio_location
     global audio_url
+    global process_status
+    global transcription
     global link
     global link_new
     
@@ -159,21 +139,13 @@ def main():
         st.header('Information')
         st.write("""
                 This project was created with the goal of participating in the 'Streamlit LLM Hackathon 2023'. 
-                \nThis site uses **AssemblyAI** to transcribe audio from YouTube videos and **LangChain** to handle chat.
-                \nTo chat about the video, please, supply your OPENAI API KEY.
+                \nThis site use **AssemblyAI** service to transcribe audio from Youtube videos.
                 \nAt this point, the video must be in English.
                 """)
-        st.header('OpenAI API KEY')
-        if st.session_state.openai_api_key == '':
-            st.write("""
-                    ❗ If you want to "ask questions about" the video, please, supply your OPENAI API KEY **before** starting.
-                    """)
-            st.session_state.openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password", value=st.session_state.openai_api_key)
-        else:
-            st.write('Using the OPENAI API KEY already supplied before.')
         
         st.header('About')
         st.write('Details about this project can be found in https://github.com/htsnet/StreamlitHackathonLLM2023')
+        
     # título
     title = f'Audio transcription and analysis with LLM'
     st.title(title)
@@ -232,7 +204,7 @@ def main():
                         )
                         
                         # st.markdown(transcript.text)
-                        st.session_state.transcription = transcript
+                        transcription = transcript
                         
                         # dictionary to store the words
                         word_counts = defaultdict(int)
@@ -242,9 +214,9 @@ def main():
                         word_count = 0
                         confidence_values = 0
                         
-                        if st.session_state.transcription.error:
-                            st.write(st.session_state.transcription.error)
-                            st.session_state.process_status = 'error'
+                        if transcription.error:
+                            st.write(transcription.error)
+                            process_status = 'error'
                             st.toast('Problem with the video!', icon='❗')
                             st.stop()
 
@@ -263,17 +235,13 @@ def main():
                         except Exception as e:
                             st.write(e)
 
-                        st.session_state.process_status = 'done'
-                        if st.session_state.openai_api_key != '':
-                            st.write("Ask question about the content! **Click on sidebar** to go to chat.")
-                        else:
-                            st.write("Sorry, there wasn't an OPENAI API KEY to ask questions...")
+                        process_status = 'done'
                         time_stop = time.time()
                 
                 except Exception as e:
                     st.write('Error! Maybe the video is private. Try another')
                     st.write(e)
-                    st.session_state.process_status = ''
+                    process_status = ''
                     time_stop = time.time()
                     st.toast('Problem with the video!', icon='❗')
                     st.stop()  
@@ -300,11 +268,9 @@ def main():
 
     with tab2:
         st.subheader('Audio Transcription')
-        if st.session_state.process_status == 'done':
+        if process_status == 'done':
             # Get the parts of the transcript that were tagged with topics
-            st.session_state.chat_text = ''
-            for result in st.session_state.transcription.iab_categories.results:
-                st.session_state.chat_text += result.text + ' '
+            for result in transcription.iab_categories.results:
                 st.markdown(result.text)
                 # st.markdown(f"Timestamp: {result.timestamp.start} - {result.timestamp.end}")
                 # for label in result.labels:
@@ -315,7 +281,7 @@ def main():
 
     with tab3:
         st.subheader('Sumary')
-        if st.session_state.process_status == 'done':
+        if process_status == 'done':
             # sort descending
             sorted_word_counts = dict(sorted(word_counts.items(), key=lambda item: item[1], reverse=True))
 
@@ -333,13 +299,14 @@ def main():
     
     with tab4:
         st.subheader('Relevant Categories')
-        if st.session_state.process_status == 'done':
+        if process_status == 'done':
             # Get a summary of all topics in the transcript
-            for label, relevance in st.session_state.transcription.iab_categories.summary.items():
+            for label, relevance in transcription.iab_categories.summary.items():
                 relevance = "{:.1f}%".format(round(relevance * 100, 1))
                 st.markdown(f"{label} ({relevance})")
         else:
             st.markdown('Process the video first!')
-            
+
+
 if __name__ == '__main__':
 	main()   
