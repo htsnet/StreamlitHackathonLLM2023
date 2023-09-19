@@ -11,4 +11,4 @@ openai
 sentence-transformers
 torch
 streamlit_feedback
-langsmith.client
+langsmith
