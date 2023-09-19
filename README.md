@@ -21,6 +21,8 @@ See this project on https://apphackathonllm2023-rrqhordtnjzy9byshrqsu6.streamlit
 
 ![Alt text](Screenshot-chat.png)
 
+<video src="working.mp4" controls title="Video demo"></video>   
+
 ------ Instructions ------   
 pip install virtualenv  
 python -m venv Ambiente_Virtual  
